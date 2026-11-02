@@ -101,7 +101,7 @@
  // estimate jeepney travel time, frequency, fare, or whether a route is operating.
  async function pedestrianLeg(from,to){
   if(distance(from,to)<25)return {status:'short',distanceMeters:Math.round(distance(from,to)),minutes:0,points:[[from.lat,from.lng],[to.lat,to.lng]]};
-  const url='https://routing.openstreetmap.de/routed-foot/route/v1/driving/'+
+  const url='https://routing.openstreetmap.de/routed-foot/route/v1/foot/'+
     [from.lng,from.lat].join(',')+';'+[to.lng,to.lat].join(',')+'?overview=full&geometries=geojson';
   try{
    const result=await request(url,{},11000),route=result.routes?.[0];

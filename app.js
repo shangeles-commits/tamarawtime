@@ -239,7 +239,7 @@ async function findLiveRoute(automatic=false){
  routeRequestBusy=true;
  el.textContent=automatic?'Automatically calculating your journey time…':'Calculating route…';
  try{
-  const url=`https://routing.openstreetmap.de/routed-${profile}/route/v1/driving/${origin.lng},${origin.lat};${dest[1]},${dest[0]}?overview=full&geometries=geojson`;
+  const url=`https://routing.openstreetmap.de/routed-${profile}/route/v1/${profile}/${origin.lng},${origin.lat};${dest[1]},${dest[0]}?overview=full&geometries=geojson`;
   const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),12000);
   let res;try{res=await fetch(url,{signal:controller.signal});}finally{clearTimeout(timeout);}
   if(!res.ok)throw Error('Routing service unavailable');const data=await res.json();if(seq!==routeSeq||currentPage!=='commute')return;
