@@ -170,6 +170,7 @@ html[data-theme="night"] .field input:focus,html[data-theme="night"] .field sele
 html[data-theme="night"] .period-button.active{background:#6de3c8!important;color:#10243b!important;border-color:#6de3c8!important}
 .auto-indicator{display:inline-block;padding:3px 7px;border-radius:99px;background:var(--surface-soft);color:var(--accent-link);font-size:10px;margin-left:6px}
 .auto-applied{display:inline-block;margin-top:8px;background:var(--surface-soft);color:var(--accent-link);font-weight:800;font-size:12px;border-radius:99px;padding:6px 10px}
+.transit-route{display:flex;flex-direction:column;gap:5px;width:100%;text-align:left;border:1px solid var(--border);border-radius:11px;background:var(--surface);color:var(--ink-strong);padding:12px 13px;margin-bottom:8px}.transit-route:hover{border-color:var(--accent-link)}.transit-route.selected{border:2px solid var(--accent-link);background:var(--surface-soft)}
 
 /* Visual walk-through: CSS mock screens, moving route, and animated elements. */
 #tutorial-dialog{width:min(630px,calc(100vw - 24px));padding:26px;max-height:calc(100dvh - 28px);overflow-y:auto}

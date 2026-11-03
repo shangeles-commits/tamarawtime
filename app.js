@@ -18,6 +18,7 @@ let mapOriginText='', shownMapSignature='';
 let liveMap=null, liveMarker=null, campusMarker=null, liveRoute=null, gpsWatchId=null, routeSeq=0, lastRouteAt=0;
 let activeRouteEstimate=null, routeRequestBusy=false, lastRouteOrigin=null, autoRouteTimer=null;
 let jeepneyOptions=[], jeepneyMarkers=[], jeepneyWalkLayers=[], jeepneySelectionSerial=0, jeepneyRequestSerial=0, jeepneyRequestBusy=false;
+let transitOptions=[], transitRouteLayers=[];
 const themeNames={forest:'FEU Forest',ocean:'Coastal Blue',sunset:'Golden Hour',night:'Midnight'};
 function currentTravel(c,mode=state.settings.mode){
  const campus=c?.campus||state.settings.campus;
@@ -167,11 +168,12 @@ function scheduleAutoRoute(force=false){
  autoRouteTimer=setTimeout(()=>{autoRouteTimer=null;findLiveRoute(true);},force?300:1400);
 }
 function clearJeepneyMap(){jeepneySelectionSerial++;for(const marker of [...jeepneyMarkers,...jeepneyWalkLayers])if(liveMap)liveMap.removeLayer(marker);jeepneyMarkers=[];jeepneyWalkLayers=[];jeepneyOptions=[];}
-function clearRouteOverlays(){if(liveRoute&&liveMap)liveMap.removeLayer(liveRoute);liveRoute=null;clearJeepneyMap();}
+function clearRouteOverlays(){if(liveRoute&&liveMap)liveMap.removeLayer(liveRoute);liveRoute=null;clearJeepneyMap();for(const layer of transitRouteLayers)if(liveMap)liveMap.removeLayer(layer);transitRouteLayers=[];transitOptions=[];}
 function renderTransportNote(){
  const el=$('#route-info');if(!el)return;
  const mode=$('#trip-mode')?.value||'Transit';
- if(mode==='Jeepney')el.innerHTML='<div class="alert">Select <b>Find route</b> after enabling GPS. We find mapped direct jeepney services and, where available, show pedestrian directions to boarding and alighting points. Results are not live-confirmed operating services. No fares or transit ETAs are generated.</div>';
+ if(mode==='Jeepney')el.innerHTML='<div class="alert">Select <b>Find route</b> after enabling GPS. We find mapped direct jeepney services and, where available, show pedestrian directions to boarding and alighting points. Results are not live-confirmed operating services. No fares or transit ETAs are generated.</div>'; 
+ else if(['Train','Bus / UV','Transit'].includes(mode))el.innerHTML='<div class="alert">Select <b>Find route</b> after enabling GPS to search public transit itineraries and ETA data through Transitous.</div>';
  else if(['Train','Bus / UV','Transit'].includes(mode))el.innerHTML='<div class="alert">'+esc(mode)+' routing is not available within this app yet. Use Sakay.ph for transit planning. Departure uses your editable journey estimate.</div>';
  else el.innerHTML='<div class="alert">'+esc(mode)+' route preview is available when GPS is enabled. Times are estimates, not real-time traffic predictions.</div>';
 }
@@ -229,10 +231,41 @@ async function findJeepneyRoutes(){
  }finally{if(requestId===jeepneyRequestSerial)jeepneyRequestBusy=false;}
 }
 
+function selectTransitItinerary(index){
+ const itinerary=transitOptions[index];if(!itinerary||!liveMap)return;
+ for(const layer of transitRouteLayers)liveMap.removeLayer(layer);transitRouteLayers=[];
+ document.querySelectorAll('.transit-route').forEach((node,i)=>{node.classList.toggle('selected',i===index);node.setAttribute('aria-pressed',String(i===index));});
+ const bounds=L.latLngBounds();let added=false;
+ for(const leg of itinerary.legs){
+  const points=(leg.geometry||[]).map(([lat,lng])=>[lat,lng]);if(!points.length)continue;
+  const color=leg.mode==='WALK'?'#1976d2':['BUS','BUSLOCAL','COACH'].includes(leg.mode)?'#ed9d25':['RAIL','TRAM','SUBWAY','METRO','TRAIN'].includes(leg.mode)?'#208c69':'#7257a7';
+  const layer=L.polyline(points,{color,weight:leg.mode==='WALK'?4:6,dashArray:leg.mode==='WALK'?'7 8':null,opacity:.92,className:'tt-route-line'}).addTo(liveMap);transitRouteLayers.push(layer);bounds.extend(points);added=true;
+ }
+ if(added)liveMap.fitBounds(bounds,{padding:[40,40],maxZoom:15});
+ if($('#trip-travel'))$('#trip-travel').value=itinerary.duration;activeRouteEstimate={minutes:itinerary.duration,mode:$('#trip-mode')?.value||'Transit',campus:selectedClass()?.campus||state.settings.campus,at:Date.now()};updateCommute();
+ $('#route-info')?.setAttribute('data-route-minutes',String(itinerary.duration));
+ toast('Transit ETA applied: '+itinerary.duration+' minutes');
+}
+async function findTransitRoutes(){
+ const el=$('#route-info');if(!el||!liveMap)return;
+ if(!gpsPosition){el.textContent='Start live GPS first to calculate a public transit route from your position.';return;}
+ if(!window.TransitRouting){el.textContent='Transit routing failed to load. Refresh the page and retry.';return;}
+ const mode=$('#trip-mode')?.value||'Transit',seq=++routeSeq;clearRouteOverlays();el.innerHTML='<div class="jeepney-loading" role="status">Searching public transit itineraries and ETA data…</div>';
+ try{
+  const result=await TransitRouting.plan({...gpsPosition}, {lat:destinationCoords()[0],lng:destinationCoords()[1]},mode);if(seq!==routeSeq||currentPage!=='commute')return;
+  if(result.status==='found'){
+   transitOptions=result.itineraries;
+   el.innerHTML='<div class="jeepney-results-title"><strong>'+transitOptions.length+' public transit itinerary'+(transitOptions.length===1?'':'s')+'</strong><span class="mini muted">Transitous / MOTIS · scheduled or model estimate</span></div><div class="jeepney-list">'+transitOptions.map((item,i)=>{
+    const transitLegs=item.legs.filter(leg=>leg.mode!=='WALK');const legsText=transitLegs.map(leg=>esc(leg.route&&leg.route!==leg.mode?leg.route+' · '+leg.transportMode:leg.transportMode)).join(' → ')||'Transit connection';
+    return '<button type="button" class="transit-route" data-action="select-transit" data-index="'+i+'" aria-pressed="false"><span class="jeepney-route-head">Transit · '+item.duration+' minutes</span><span class="jeepney-route-step">'+legsText+'</span><span class="jeepney-route-step">'+item.transfers+' transfer'+(item.transfers===1?'':'s')+'</span></button>';
+   }).join('')+'</div><p class="mini muted">The selected itinerary updates Estimated journey and departure calculations. Service times depend on available GTFS data and may not be live.</p><a class="jeepney-fallback" href="https://transitous.org/sources/" target="_blank" rel="noopener noreferrer">Transit data sources and attribution ↗</a>';selectTransitItinerary(0);
+  }else el.innerHTML='<div class="alert">'+esc(result.message||'No public transit itinerary was found.')+'</div><a class="jeepney-fallback" href="https://sakay.ph/" target="_blank" rel="noopener noreferrer">Check verified local transit options on Sakay.ph ↗</a>';
+ }catch(error){if(seq===routeSeq)el.innerHTML='<div class="alert">Transit route unavailable: '+esc(error.message||'network error')+'. Your editable journey estimate remains active.</div>';}
+}
 async function findLiveRoute(automatic=false){
  const el=$('#route-info');if(!liveMap||!el)return;
  if(!gpsPosition){el.textContent='Start live GPS first to calculate a route from your position.';return;}
- const mode=$('#trip-mode')?.value||'Transit';if(mode==='Jeepney'){await findJeepneyRoutes();return;}if(!['Walking','Driving'].includes(mode)){renderTransportNote();return;}
+ const mode=$('#trip-mode')?.value||'Transit';if(mode==='Jeepney'){await findJeepneyRoutes();return;}if(['Transit','Train','Bus / UV'].includes(mode)){await findTransitRoutes();return;}if(!['Walking','Driving'].includes(mode)){renderTransportNote();return;}
  const profile=mode==='Walking'?'foot':'driving',dest=destinationCoords(),origin=gpsPosition,seq=++routeSeq;
  lastRouteAt=Date.now();lastRouteOrigin={...origin};
  if(routeRequestBusy)return;
@@ -328,6 +361,7 @@ $('#content').addEventListener('click',async event=>{
  if(action==='stop-location'){stopGps();return;}
  if(action==='show-map'){await findLiveRoute(false);await logActivity('maps_opened');return;}
  if(action==='select-jeepney'){selectJeepneyRoute(Number(button.dataset.index));return;}
+ if(action==='select-transit'){selectTransitItinerary(Number(button.dataset.index));return;}
  if(action==='use-route-eta'){const minutes=Number($('#route-info')?.dataset.routeMinutes);if(Number.isFinite(minutes)&&minutes>0){$('#trip-travel').value=minutes;updateCommute();toast('Route estimate applied. Save commute settings to keep it.');}return;}
  if(action==='refresh-cloud'){
   try{await refreshCloud();toast('Cloud data refreshed ✓');}catch(err){toast('Refresh failed: '+(err.message||err));}return;
