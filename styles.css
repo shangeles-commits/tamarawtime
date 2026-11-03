@@ -28,11 +28,13 @@
 .auth-brand strong{font-size:17px;letter-spacing:1px}.auth-brand small{display:block;font-size:12px;color:#798e82}
 .auth-card h1{margin:0;font-size:27px;line-height:1.2}.auth-subtitle{color:var(--muted);margin:9px 0 25px;font-size:14px}
 .auth-submit{width:100%;margin:4px 0 12px}.auth-mode-toggle{display:block;margin:0 auto 10px;padding:9px}
+.auth-options{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:-2px 0 12px}.remember-email{display:flex;align-items:center;gap:7px;font-size:13px}.remember-email input{width:16px;height:16px;margin:0}.forgot-password{padding:6px 0}.forgot-settings{margin:0 0 14px}
+.actions{gap:10px}.map-buttons button,.topright button{white-space:nowrap}
 #auth-message:not(:empty){background:#fff2e3;border-radius:10px;color:#8a421b;padding:12px;font-size:13px;overflow-wrap:anywhere}
 .auth-card .field input{font-size:16px}.pilot-consent{font-size:12px;color:#647568;padding:6px 0 16px}.pilot-consent label{display:flex;gap:9px;align-items:flex-start}.pilot-consent input{margin-top:3px;flex-shrink:0}
 .account-email{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;max-width:180px;white-space:nowrap}
 @media(max-width:850px){.account-email{max-width:105px}.topright{flex-wrap:wrap}}
-@media(max-width:740px){.topright{gap:7px}.account-email{max-width:110px}.topright .date{width:100%}.auth-card{padding:23px}.auth-screen{padding:15px}.topright #signout-button{padding:9px 11px}}
+@media(max-width:740px){.topright{gap:7px}.account-email{max-width:110px}.topright .date{width:100%}.auth-card{padding:23px}.auth-screen{padding:15px}.topright #signout-button{padding:9px 11px}.auth-options{align-items:flex-start}.actions{flex-wrap:wrap}.actions button{flex:1}.forgot-password{white-space:normal;text-align:right}}
 
 /* Tamaraw Time v4 — attendance-focused map + live date/time */
 .datetime{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:#edf3ec;border-radius:12px;padding:7px 10px;color:#335b48;font-weight:700}

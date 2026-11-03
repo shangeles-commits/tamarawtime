@@ -4,9 +4,15 @@
   <form id="auth-form" data-mode="login">
     <div class="field"><label for="auth-email">Student email</label><input id="auth-email" type="email" autocomplete="email" required placeholder="you@example.com"></div>
     <div class="field"><label for="auth-password">Password (at least 6 characters)</label><input id="auth-password" type="password" autocomplete="current-password" minlength="6" required></div>
+    <div class="auth-options" id="auth-options"><label class="remember-email"><input type="checkbox" id="remember-email"> Remember me</label><button type="button" id="forgot-password" class="linkbtn forgot-password">Forgot Password?</button></div>
     <div class="pilot-consent" id="auth-consent" hidden><label><input type="checkbox" id="study-consent"> I understand that my class and commute actions will be logged in the Tamaraw Time research database, and reviewed by the researchers. My exact GPS location will not be stored in the database.</label></div>
     <button id="auth-submit" type="submit" class="primary auth-submit">Sign in</button>
   </form>
+  <form id="password-reset-form" hidden>
+    <div class="field"><label for="new-password">New password</label><input id="new-password" type="password" autocomplete="new-password" minlength="6" required placeholder="At least 6 characters"></div>
+    <button id="password-reset-submit" type="submit" class="primary auth-submit">Update password</button>
+  </form>
+  <button type="button" id="auth-success-button" class="primary auth-submit" hidden>Continue to sign in</button>
   <button type="button" id="auth-mode-toggle" class="linkbtn auth-mode-toggle">New here? Create an account</button>
   <p id="auth-message" role="status" aria-live="polite"></p>
   <p class="mini muted">Your planner is stored online. Your device may remember your sign-in session. Student accounts are private from other students; the project team can review usage logs.</p>
