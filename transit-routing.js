@@ -51,11 +51,11 @@
   const saved=cache.get(cacheKey);if(saved&&Date.now()-saved.at<5*60*1000)return saved.result;
   const params=new URLSearchParams({fromPlace:`${origin.lat},${origin.lng}`,toPlace:`${dest.lat},${dest.lng}`,numItineraries:'5'});
   try{
-   const data=await request(API+'?'+params.toString());const raw=data.itineraries||data.direct||[];
+   const data=await request(API+'?'+params.toString());const published=data.itineraries||[];const directTransit=(data.direct||[]).filter(item=>Array.isArray(item.legs)&&item.legs.some(leg=>String(leg.mode||leg.transportMode||'').toUpperCase()!=='WALK'));const raw=published.length?published:directTransit;
    let itineraries=raw.map((item,index)=>{
     const legs=summarizeLegs(item.legs);let seconds=Number(item.duration)||0;if(!seconds&&item.endTime&&item.startTime)seconds=(Date.parse(item.endTime)-Date.parse(item.startTime))/1000;if(!seconds)seconds=legs.reduce((sum,leg)=>sum+leg.duration,0);const duration=Math.max(1,Math.ceil(seconds/60));
     return {id:String(item.id||index),duration,startTime:item.startTime||null,endTime:item.endTime||null,transfers:Number.isFinite(item.transfers)?item.transfers:Math.max(0,legs.filter(leg=>leg.mode!=='WALK').length-1),legs};
-   }).filter(item=>item.duration>0&&item.legs.length);
+   }).filter(item=>item.duration>0&&item.legs.length&&item.legs.some(leg=>leg.mode!=='WALK'));
    if(modeKey==='Train')itineraries=itineraries.filter(item=>item.legs.some(leg=>['RAIL','TRAM','SUBWAY','METRO','TRAIN'].includes(leg.mode)));
    if(modeKey==='Bus / UV')itineraries=itineraries.filter(item=>item.legs.some(leg=>['BUS','BUSLOCAL','COACH'].includes(leg.mode)));
    itineraries.sort((a,b)=>a.duration-b.duration);

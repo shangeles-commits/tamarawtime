@@ -259,7 +259,27 @@ async function findTransitRoutes(){
     const transitLegs=item.legs.filter(leg=>leg.mode!=='WALK');const legsText=transitLegs.map(leg=>esc(leg.route&&leg.route!==leg.mode?leg.route+' · '+leg.transportMode:leg.transportMode)).join(' → ')||'Transit connection';
     return '<button type="button" class="transit-route" data-action="select-transit" data-index="'+i+'" aria-pressed="false"><span class="jeepney-route-head">Transit · '+item.duration+' minutes</span><span class="jeepney-route-step">'+legsText+'</span><span class="jeepney-route-step">'+item.transfers+' transfer'+(item.transfers===1?'':'s')+'</span></button>';
    }).join('')+'</div><p class="mini muted">The selected itinerary updates Estimated journey and departure calculations. Service times depend on available GTFS data and may not be live.</p><a class="jeepney-fallback" href="https://transitous.org/sources/" target="_blank" rel="noopener noreferrer">Transit data sources and attribution ↗</a>';selectTransitItinerary(0);
-  }else el.innerHTML='<div class="alert">'+esc(result.message||'No public transit itinerary was found.')+'</div><a class="jeepney-fallback" href="https://sakay.ph/" target="_blank" rel="noopener noreferrer">Check verified local transit options on Sakay.ph ↗</a>';
+  }else if(['Transit','Bus / UV'].includes(mode)&&window.JeepneyRouting){
+   el.innerHTML='<div class="jeepney-loading" role="status">Searching nearby mapped public transport routes…</div>';
+   try{
+    const fallback=await JeepneyRouting.findRoutes({...gpsPosition},{lat:destinationCoords()[0],lng:destinationCoords()[1]});if(seq!==routeSeq||currentPage!=='commute')return;
+    if(fallback.status==='found'&&fallback.routes.length){
+     transitOptions=[];const mapped=[];
+     for(const route of fallback.routes.slice(0,4)){
+      const walk=await JeepneyRouting.planWalkingLegs({...gpsPosition},{lat:destinationCoords()[0],lng:destinationCoords()[1]},route);
+      const rideMeters=Math.max(300,JeepneyRouting.distance(route.board,route.alight));const rideMinutes=Math.ceil(rideMeters/1800)+5;
+      const walkingMinutes=(walk.access.minutes||0)+(walk.exit.minutes||0);const duration=Math.max(15,walkingMinutes+rideMinutes+5);
+      const legs=[];
+      if(walk.access.status==='routed')legs.push({mode:'WALK',geometry:walk.access.points});
+      legs.push({mode:'BUS',transportMode:'Bus / Jeepney',route:route.ref||route.name,geometry:route.points.map(([lat,lng])=>[lat,lng])});
+      if(walk.exit.status==='routed')legs.push({mode:'WALK',geometry:walk.exit.points});
+      const item={id:String(route.id),duration,transfers:0,legs,mapped:true,routeName:route.ref||route.name};mapped.push(item);
+     }
+     transitOptions=mapped;
+     el.innerHTML='<div class="jeepney-results-title"><strong>'+transitOptions.length+' mapped public transport route'+(transitOptions.length===1?'':'s')+'</strong><span class="mini muted">No published Transitous itinerary · OpenStreetMap fallback</span></div><div class="jeepney-list">'+transitOptions.map((item,i)=>'<button type="button" class="transit-route" data-action="select-transit" data-index="'+i+'" aria-pressed="false"><span class="jeepney-route-head">'+esc(item.routeName)+' · '+item.duration+' minutes estimated</span><span class="jeepney-route-step">Mapped bus/jeepney candidate · modeled ride and walking time</span><span class="jeepney-route-step">Verify signage, fare, and operating status locally</span></button>').join('')+'</div><p class="mini muted">This fallback is not a confirmed real-time transit ETA. It combines walking directions with a modeled ride estimate from mapped stops.</p><a class="jeepney-fallback" href="https://sakay.ph/" target="_blank" rel="noopener noreferrer">Check verified local transit options on Sakay.ph ↗</a>';selectTransitItinerary(0);
+    }else el.innerHTML='<div class="alert">No confirmed public transit route is available for this trip from published transit data. The app cannot safely invent a transit ETA.</div><a class="jeepney-fallback" href="https://sakay.ph/" target="_blank" rel="noopener noreferrer">Check verified local transit options on Sakay.ph ↗</a>';activeRouteEstimate=null;
+   }catch(_error){el.innerHTML='<div class="alert">No confirmed transit itinerary was found for this trip. Published transit data does not cover this route.</div><a class="jeepney-fallback" href="https://sakay.ph/" target="_blank" rel="noopener noreferrer">Check verified local transit options on Sakay.ph ↗</a>';}
+  }else el.innerHTML='<div class="alert">No confirmed public transit itinerary was found for this trip. Published transit data does not cover this route.</div><a class="jeepney-fallback" href="https://sakay.ph/" target="_blank" rel="noopener noreferrer">Check verified local transit options on Sakay.ph ↗</a>';
  }catch(error){if(seq===routeSeq)el.innerHTML='<div class="alert">Transit route unavailable: '+esc(error.message||'network error')+'. Your editable journey estimate remains active.</div>';}
 }
 async function findLiveRoute(automatic=false){
